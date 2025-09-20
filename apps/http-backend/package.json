@@ -3,10 +3,20 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -b",
+    "dev": "npm run build && NODE_ENV=development nodemon dist/bin.js",
+    "start": "npm run build && NODE_ENV=production node dist/bin.js"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@types/express": "^5.0.3",
+    "express": "^5.1.0",
+    "nodemon": "^3.1.10"
+  }
 }

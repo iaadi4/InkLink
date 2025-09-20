@@ -1,0 +1,22 @@
+{
+  "name": "ws-backend",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "@types/ws": "^8.18.1",
+    "nodemon": "^3.1.10",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "dev": "npm run build && WS_ENV=development nodemon dist/index.js",
+    "start": "npm run build && WS_ENV=production dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
