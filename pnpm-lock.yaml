@@ -45,15 +45,12 @@ importers:
         specifier: ^3.1.10
         version: 3.1.10
     devDependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
-      prisma:
-        specifier: ^6.16.2
-        version: 6.16.2(typescript@5.9.2)
-      tsx:
-        specifier: ^4.20.5
-        version: 4.20.5
 
   apps/web:
     dependencies:
@@ -107,6 +104,22 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../../packages/typescript-config
+
+  packages/db:
+    dependencies:
+      '@prisma/client':
+        specifier: ^6.16.2
+        version: 6.16.2(prisma@6.16.2(typescript@5.9.2))(typescript@5.9.2)
+      '@prisma/extension-accelerate':
+        specifier: ^2.0.2
+        version: 2.0.2(@prisma/client@6.16.2(prisma@6.16.2(typescript@5.9.2))(typescript@5.9.2))
+    devDependencies:
+      prisma:
+        specifier: ^6.16.2
+        version: 6.16.2(typescript@5.9.2)
+      tsx:
+        specifier: ^4.20.5
+        version: 4.20.5
 
   packages/eslint-config:
     devDependencies:

@@ -9,8 +9,7 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "prisma": "^6.16.2",
-    "tsx": "^4.20.5"
+    "@repo/db": "workspace:*"
   },
   "keywords": [],
   "author": "",

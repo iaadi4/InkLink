@@ -3,9 +3,7 @@ import jwt from "jsonwebtoken";
 
 import type { Request, Response } from "express";
 import statusCode from "../utils/status-codes";
-import { PrismaClient } from "../generated/prisma";
-
-const prisma = new PrismaClient();
+import prisma from "@repo/db";
 
 const signup = async(req: Request, res: Response) => {
     try {
