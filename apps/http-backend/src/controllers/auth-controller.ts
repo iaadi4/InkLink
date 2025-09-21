@@ -19,7 +19,7 @@ const signup = async(req: Request, res: Response) => {
                     message: "Invalid input",
                     details: z.treeifyError(validation.error)
                 },
-                data: {}
+                data: null
             });
         }
 
@@ -33,7 +33,7 @@ const signup = async(req: Request, res: Response) => {
                 success: "false",
                 message: "failed to hash password",
                 error: error,
-                data: {}
+                data: null
             })
         }
 
@@ -48,7 +48,7 @@ const signup = async(req: Request, res: Response) => {
         return res.status(statusCode.SUCCESS).json({
             success: "true",
             message: "user created successfully",
-            error: {},
+            error: null,
             data
         })
 
@@ -57,7 +57,7 @@ const signup = async(req: Request, res: Response) => {
             success: "false",
             message: "some error occur in controller layer",
             error: error,
-            data: {}
+            data: null
         })
     }
 }
@@ -73,7 +73,7 @@ const login = async(req: Request, res: Response) => {
                     message: "Invalid input",
                     details: z.treeifyError(validation.error)
                 },
-                data: {}
+                data: null
             });
         }
 
@@ -92,7 +92,7 @@ const login = async(req: Request, res: Response) => {
                 error: {
                     message: "user does not exist"
                 },
-                data: {}
+                data: null
             })
         }
 
@@ -105,7 +105,7 @@ const login = async(req: Request, res: Response) => {
                 error: {
                     message: "incorrect password"
                 },
-                data: {}
+                data: null
             })
         }
 
@@ -125,7 +125,7 @@ const login = async(req: Request, res: Response) => {
         return res.status(statusCode.SUCCESS).json({
             success: "true",
             message: "user logged in successfully",
-            error: {},
+            error: null,
             data
         })
 
@@ -135,7 +135,7 @@ const login = async(req: Request, res: Response) => {
             success: "false",
             message: "some error occur in controller layer",
             error: error,
-            data: {}
+            data: null
         })
     }
 }
