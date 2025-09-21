@@ -2,13 +2,14 @@
   "name": "@repo/db",
   "version": "1.0.0",
   "exports": {
-    ".": "./index.ts"
+    ".": "./src/index.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
     "prisma": "^6.16.2",
     "tsx": "^4.20.5"
   },
