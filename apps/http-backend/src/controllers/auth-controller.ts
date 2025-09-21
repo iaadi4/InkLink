@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import type { Request, Response } from "express";
 import statusCode from "../utils/status-codes";
 import prisma from "@repo/db";
+import { JWT_SECRET } from "@repo/backend-common/config";
 
 const signup = async(req: Request, res: Response) => {
     try {
@@ -104,7 +105,7 @@ const login = async(req: Request, res: Response) => {
 
         const token = jwt.sign(
             {id: data.id, email: data.email},
-            process.env.JWT_SECRET!,
+            JWT_SECRET,
             {expiresIn: '7d'} // 7 days
         )
 
