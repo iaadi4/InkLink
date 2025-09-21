@@ -8,9 +8,10 @@
     "start": "npm run build && NODE_ENV=production node dist/bin.js"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*",
+    "@repo/backend-common": "workspace:*",
+    "@repo/common": "workspace:*",
     "@repo/db": "workspace:*",
-    "@repo/backend-common": "workspace:*"
+    "@repo/typescript-config": "workspace:*"
   },
   "keywords": [],
   "author": "",
@@ -24,6 +25,7 @@
     "argon2": "^0.44.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "zod": "^4.1.11"
   }
 }

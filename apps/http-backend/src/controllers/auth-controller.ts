@@ -1,26 +1,30 @@
 import argon2 from "argon2";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 import type { Request, Response } from "express";
 import statusCode from "../utils/status-codes";
 import prisma from "@repo/db";
 import { JWT_SECRET } from "@repo/backend-common/config";
+import { createUserSchema, loginUserSchema } from "@repo/common/types";
 
 const signup = async(req: Request, res: Response) => {
     try {
-        let hashedPassword: string;
-        const {name, email, password} = req.body;
-
-        if(!name || !email || !password) {
+        const validation = createUserSchema.safeParse(req.body);
+        if (!validation.success) {
             return res.status(statusCode.BAD_REQUEST).json({
                 success: "false",
-                message: "missing input fields",
+                message: "invalid input",
                 error: {
-                    message: "Required field missing"
+                    message: "Invalid input",
+                    details: z.treeifyError(validation.error)
                 },
                 data: {}
-            })
+            });
         }
+
+        let hashedPassword: string;
+        const {name, email, password} = validation.data;
 
         try {
             hashedPassword = await argon2.hash(password);
@@ -60,18 +64,20 @@ const signup = async(req: Request, res: Response) => {
 
 const login = async(req: Request, res: Response) => {
     try {
-        const {email, password} = req.body;
-
-        if(!email || !password) {
+        const validation = loginUserSchema.safeParse(req.body);
+        if (!validation.success) {
             return res.status(statusCode.BAD_REQUEST).json({
                 success: "false",
-                message: "missing input fields",
+                message: "invalid input",
                 error: {
-                    message: "Required field missing"
+                    message: "Invalid input",
+                    details: z.treeifyError(validation.error)
                 },
                 data: {}
-            })
+            });
         }
+
+        const { email, password } = validation.data;
 
         const data = await prisma.user.findFirst({
             where: {
