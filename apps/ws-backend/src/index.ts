@@ -51,6 +51,7 @@ wss.on("connection", (ws, req) => {
         if(existingWs && existingWs.readyState === existingWs.OPEN) {
             existingWs.close(4000, "Session replaced");
         }
+        users.delete(userId);
     }
 
     users.set(userId, ws as unknown as WebSocket);
@@ -91,11 +92,47 @@ wss.on("connection", (ws, req) => {
                     rooms.delete(roomId);
                 }
             }
+        } else if(parsedData.type == "send-data") {
+            const { roomId, message } = parsedData;
+
+            await prisma.chat.create({
+                data: {
+                    userId,
+                    roomId,
+                    content: message
+                }
+            })
+
+            const roomUsers = rooms.get(roomId);
+            if(!roomUsers) {
+                return;
+            }
+
+            for(let roomUser of roomUsers) {
+                const roomUserWs = users.get(roomUser);
+                if(!roomUserWs) {
+                    continue;
+                }
+
+                roomUserWs.send(JSON.stringify({
+                    userId,
+                    roomId,
+                    message,
+                    type: "message"
+                }));
+            }
         }
     })
 
     ws.on("close", () => {
-        console.log("Client disconnected!");
+        users.delete(userId);
+        for(const [roomId, roomUsers] of rooms.entries()) {
+            roomUsers.delete(userId);
+
+            if(roomUsers.size === 0) {
+                rooms.delete(roomId);
+            }
+        }
     })
 });
 
