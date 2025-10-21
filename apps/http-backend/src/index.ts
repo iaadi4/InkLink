@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => {
     res.json({ message: "Hello, World!" });
-})
+});
 
 app.use(cookieParser());
 app.use(express.json());
@@ -21,4 +21,4 @@ app.use('/room', roomRoute);
 
 export async function startServer() {
     app.listen(PORT);
-}
+};

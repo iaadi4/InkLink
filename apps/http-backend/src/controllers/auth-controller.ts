@@ -24,7 +24,7 @@ const signup = async(req: Request, res: Response) => {
         }
 
         let hashedPassword: string;
-        const {name, email, password} = validation.data;
+        const { name, email, password } = validation.data;
 
         try {
             hashedPassword = await argon2.hash(password);
@@ -110,9 +110,9 @@ const login = async(req: Request, res: Response) => {
         }
 
         const token = jwt.sign(
-            {id: data.id, email: data.email},
+            { id: data.id, email: data.email },
             JWT_SECRET,
-            {expiresIn: '7d'} // 7 days
+            { expiresIn: '7d' } // 7 days
         )
 
         res.cookie("token", token, {
