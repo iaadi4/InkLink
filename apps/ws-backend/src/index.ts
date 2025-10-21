@@ -1,7 +1,9 @@
 import { WebSocketServer } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
-import prisma from "@repo/db";
+
+import { REDIS_URL } from "@repo/backend-common/config";
+import { Queue } from "bullmq";
 
 const PORT = parseInt(process.env.PORT as string) || 8080;
 
@@ -9,6 +11,11 @@ const wss = new WebSocketServer({ port: PORT });
 
 const users: Map<string, WebSocket> = new Map();  // userId -> WebSocket
 const rooms: Map<string, Set<string>> = new Map(); // roomId -> Set of userIds
+
+
+const messageQueue = new Queue("chat-message", {
+    connection: { host: REDIS_URL }
+});
 
 const checkAuthentication = (token: string) =>  {
     try {
@@ -95,19 +102,12 @@ wss.on("connection", (ws, req) => {
         } else if(parsedData.type == "send-data") {
             const { roomId, message } = parsedData;
 
-            await prisma.chat.create({
-                data: {
-                    userId,
-                    roomId,
-                    content: message
-                }
-            })
-
             const roomUsers = rooms.get(roomId);
             if(!roomUsers) {
                 return;
             }
 
+            // brodcasting message immediately, creating message in db is pushed in queue to remove delay
             for(let roomUser of roomUsers) {
                 const roomUserWs = users.get(roomUser);
                 if(!roomUserWs) {
@@ -121,6 +121,14 @@ wss.on("connection", (ws, req) => {
                     type: "message"
                 }));
             }
+
+            messageQueue.add(
+                "saveMessage",
+                { userId, roomId, message },
+                // 5 retries before job fails
+                // exponential -> delay increases with each retries (delay * 2^(attempt-1))
+                { attempts: 5, backoff: { type: "exponential", delay: 1000 } } // base delay 1000ms = 1s
+            )
         }
     })
 

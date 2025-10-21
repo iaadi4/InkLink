@@ -5,14 +5,15 @@
   "dependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "@types/ws": "^8.18.1",
+    "bullmq": "^5.61.0",
     "jsonwebtoken": "^9.0.2",
     "nodemon": "^3.1.10",
     "ws": "^8.18.3"
   },
   "devDependencies": {
     "@repo/backend-common": "workspace:*",
-    "@repo/typescript-config": "workspace:*",
-    "@repo/db": "workspace:*"
+    "@repo/db": "workspace:*",
+    "@repo/typescript-config": "workspace:*"
   },
   "scripts": {
     "build": "tsc -b",
