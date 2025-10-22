@@ -249,7 +249,10 @@ const InkLinkLanding = () => {
               into reality.
             </motion.p>
             <motion.div variants={itemVariant}>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white text-lg px-8 py-6 rounded-full transition-transform hover:scale-105 shadow-lg shadow-indigo-200">
+              <Button
+                onClick={() => router.push("/login")}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-lg px-8 py-6 rounded-full transition-transform hover:scale-105 shadow-lg shadow-indigo-200"
+              >
                 Get started free <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </motion.div>

@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/card";
 import { createUserSchema } from "@repo/common/types";
 
+import { httpServerUrl } from "config";
+
 type CreateUserInput = z.infer<typeof createUserSchema>;
 
 export default function InkLinkSignup() {
@@ -36,7 +38,7 @@ export default function InkLinkSignup() {
   async function onSubmit(data: CreateUserInput) {
     setApiError(null);
     try {
-      const response = await fetch("http://localhost:5000/auth/signup", {
+      const response = await fetch(`${httpServerUrl}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
