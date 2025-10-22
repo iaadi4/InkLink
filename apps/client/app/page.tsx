@@ -9,19 +9,6 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const AnimatedGradientBackground = () => {
-  return (
-    <div
-      className="absolute inset-0 -z-10"
-      style={{
-        backgroundSize: "200% 200%",
-        backgroundImage: "linear-gradient(to right, #e0e7ff, #ede9fe, #fce7f3)", // Tailwind's indigo-100, purple-100, pink-100
-        animation: "bg-pan 15s ease infinite",
-      }}
-    />
-  );
-};
-
 // Cursor component for the hero section
 const Cursor = ({ name, color }: { name: string; color: string }) => (
   <div
@@ -153,23 +140,11 @@ const InkLinkLanding = () => {
 
   return (
     <div className="font-jakarta bg-white text-gray-800">
-      <style jsx global>{`
+      <style>{`
         @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 
         .font-jakarta {
           font-family: "Plus Jakarta Sans", sans-serif;
-        }
-
-        @keyframes bg-pan {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
         }
       `}</style>
 
@@ -241,8 +216,6 @@ const InkLinkLanding = () => {
           ref={heroContainerRef}
           className="relative min-h-screen flex items-center justify-center px-6 lg:px-8 text-center overflow-hidden"
         >
-          <AnimatedGradientBackground />
-
           <div className="absolute inset-0 z-10">
             {cursorsData.map((cursor) => (
               <Cursor
@@ -283,7 +256,7 @@ const InkLinkLanding = () => {
 
         <section ref={heroPinRef} className="px-6 lg:px-8 h-screen">
           <div className="max-w-7xl mx-auto h-full rounded-3xl overflow-hidden shadow-2xl shadow-gray-200 border border-gray-200/80 bg-gray-50 flex flex-col">
-            <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200/80 px-4 py-3 flex items-center gap-2 flex-shrink-0">
+            <div className="bg-white/50 backdrop-blur-sm border-b border-gray-200/80 px-4 py-3 flex items-center gap-2 shrink-0">
               <div className="flex gap-2">
                 <div className="w-3 h-3 rounded-full bg-red-400"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
@@ -578,7 +551,7 @@ const InkLinkLanding = () => {
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {/* Card 1 */}
+
               <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 transform hover:-translate-y-2 transition-transform">
                 <h4 className="font-bold text-lg mb-2">Kanban Board</h4>
                 <p className="text-sm text-gray-500 mb-4">
@@ -605,7 +578,7 @@ const InkLinkLanding = () => {
                   </div>
                 </div>
               </div>
-              {/* Card 2 */}
+
               <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 transform hover:-translate-y-2 transition-transform">
                 <h4 className="font-bold text-lg mb-2">Mind Map</h4>
                 <p className="text-sm text-gray-500 mb-4">
