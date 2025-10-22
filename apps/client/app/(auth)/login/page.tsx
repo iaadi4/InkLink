@@ -36,7 +36,7 @@ export default function InkLinkLogin() {
   async function onSubmit(data: LoginUserInput) {
     setApiError(null);
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch("http://localhost:5000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -50,7 +50,7 @@ export default function InkLinkLogin() {
         );
       }
 
-      router.push("/dashboard");
+      router.push("/home");
     } catch (error) {
       const errorMessage =
         error instanceof Error
