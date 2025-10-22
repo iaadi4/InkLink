@@ -6,6 +6,7 @@ import { ArrowRight, PenTool, Text, Square, Circle } from "lucide-react";
 import { motion, Variants, useScroll, useTransform } from "framer-motion";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { useRouter } from "next/navigation";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -41,6 +42,8 @@ const InkLinkLanding = () => {
   const heroContainerRef = useRef(null);
   const heroPinRef = useRef(null);
   const infiniteCanvasRef = useRef(null);
+
+  const router = useRouter();
 
   const cursorsData = [
     { name: "Alex", color: "#F59E0B" },
@@ -153,15 +156,16 @@ const InkLinkLanding = () => {
           <div className="flex items-center justify-between h-20">
             <div className="flex items-center gap-12">
               <a href="#" className="flex items-center gap-3">
+
                 <svg
-                  width="32"
-                  height="32"
+                  width="36"
+                  height="36"
                   viewBox="0 0 24 24"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
-                    d="M15.44,10.33,10,12.67,9.65,8.8,14,6.46ZM12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm4.4,14.8-1.55-1.55a1.34,1.34,0,0,0-.8-.4,1.39,1.39,0,0,0-.7.2L12,16.4l-1.55-1.55a1.34,1.34,0,0,0-.8-.4,1.39,1.39,0,0,0-.7.2L7.6,15.2,6.2,13.8a1.85,1.85,0,0,1,0-2.6L12,5.6l5.8,5.6a1.85,1.85,0,0,1,0,2.6Z"
+                    d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 8.5C15.5 9.33 14.83 10 14 10C13.17 10 12.5 9.33 12.5 8.5C12.5 7.67 13.17 7 14 7C14.83 7 15.5 7.67 15.5 8.5ZM8.5 15.5C8.5 16.33 7.83 17 7 17C6.17 17 5.5 16.33 5.5 15.5C5.5 14.67 6.17 14 7 14C7.83 14 8.5 14.67 8.5 15.5ZM12 17.5C10.5 17.5 9 17 7.5 16.5C7.3 16.4 7.1 16.2 6.9 16C6.7 15.8 6.5 15.6 6.3 15.4C5.7 14.7 5.2 13.9 4.9 13.1C4.6 12.3 4.5 11.5 4.5 10.7C4.5 8.6 6.1 7 8.2 7H15.8C17.9 7 19.5 8.6 19.5 10.7C19.5 11.5 19.4 12.3 19.1 13.1C18.8 13.9 18.3 14.7 17.7 15.4C17.5 15.6 17.3 15.8 17.1 16C16.9 16.2 16.7 16.4 16.5 16.5C15 17 13.5 17.5 12 17.5Z"
                     fill="#4F46E5"
                   />
                 </svg>
@@ -174,13 +178,7 @@ const InkLinkLanding = () => {
                   href="#"
                   className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
                 >
-                  Product
-                </a>
-                <a
-                  href="#"
-                  className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
-                >
-                  Solutions
+                  Templates
                 </a>
                 <a
                   href="#"
@@ -198,12 +196,16 @@ const InkLinkLanding = () => {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                onClick={() => router.push("/login")}
                 variant="ghost"
-                className="hidden md:inline-flex text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                className="hidden md:inline-flex text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:cursor-pointer"
               >
                 Sign in
               </Button>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6 transition-transform hover:scale-105">
+              <Button
+                onClick={() => router.push("/signup")}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full px-6 transition-transform hover:scale-105 hover:cursor-pointer"
+              >
                 Sign up free
               </Button>
             </div>
@@ -626,7 +628,7 @@ const InkLinkLanding = () => {
                   </svg>
                 </div>
               </div>
-              {/* Card 3 */}
+
               <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100 transform hover:-translate-y-2 transition-transform">
                 <h4 className="font-bold text-lg mb-2">User Journey</h4>
                 <p className="text-sm text-gray-500 mb-4">
@@ -668,11 +670,11 @@ const InkLinkLanding = () => {
               Trusted by teams at
             </p>
             <div className="flex flex-wrap justify-center items-center gap-x-16 gap-y-8 text-gray-400">
-              <p className="text-3xl font-bold tracking-tighter">Nexus</p>
-              <p className="text-3xl font-bold tracking-tighter">ApexBuild</p>
-              <p className="text-3xl font-bold tracking-tighter">Innovate Co</p>
-              <p className="text-3xl font-bold tracking-tighter">Quantum</p>
-              <p className="text-3xl font-bold tracking-tighter">Stellar</p>
+              <p className="text-3xl font-bold tracking-tighter hover:text-gray-700 hover:cursor-pointer">Nexus</p>
+              <p className="text-3xl font-bold tracking-tighter hover:text-gray-700 hover:cursor-pointer">ApexBuild</p>
+              <p className="text-3xl font-bold tracking-tighter hover:text-gray-700 hover:cursor-pointer">Innovate Co</p>
+              <p className="text-3xl font-bold tracking-tighter hover:text-gray-700 hover:cursor-pointer">Quantum</p>
+              <p className="text-3xl font-bold tracking-tighter hover:text-gray-700 hover:cursor-pointer">Stellar</p>
             </div>
           </div>
         </section>
@@ -682,15 +684,16 @@ const InkLinkLanding = () => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
               <div className="lg:col-span-4">
                 <a href="#" className="flex items-center gap-3 mb-4">
+
                   <svg
-                    width="32"
-                    height="32"
+                    width="36"
+                    height="36"
                     viewBox="0 0 24 24"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
                   >
                     <path
-                      d="M15.44,10.33,10,12.67,9.65,8.8,14,6.46ZM12,2A10,10,0,1,0,22,12,10,10,0,0,0,12,2Zm4.4,14.8-1.55-1.55a1.34,1.34,0,0,0-.8-.4,1.39,1.39,0,0,0-.7.2L12,16.4l-1.55-1.55a1.34,1.34,0,0,0-.8-.4,1.39,1.39,0,0,0-.7.2L7.6,15.2,6.2,13.8a1.85,1.85,0,0,1,0-2.6L12,5.6l5.8,5.6a1.85,1.85,0,0,1,0,2.6Z"
+                      d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM15.5 8.5C15.5 9.33 14.83 10 14 10C13.17 10 12.5 9.33 12.5 8.5C12.5 7.67 13.17 7 14 7C14.83 7 15.5 7.67 15.5 8.5ZM8.5 15.5C8.5 16.33 7.83 17 7 17C6.17 17 5.5 16.33 5.5 15.5C5.5 14.67 6.17 14 7 14C7.83 14 8.5 14.67 8.5 15.5ZM12 17.5C10.5 17.5 9 17 7.5 16.5C7.3 16.4 7.1 16.2 6.9 16C6.7 15.8 6.5 15.6 6.3 15.4C5.7 14.7 5.2 13.9 4.9 13.1C4.6 12.3 4.5 11.5 4.5 10.7C4.5 8.6 6.1 7 8.2 7H15.8C17.9 7 19.5 8.6 19.5 10.7C19.5 11.5 19.4 12.3 19.1 13.1C18.8 13.9 18.3 14.7 17.7 15.4C17.5 15.6 17.3 15.8 17.1 16C16.9 16.2 16.7 16.4 16.5 16.5C15 17 13.5 17.5 12 17.5Z"
                       fill="white"
                     />
                   </svg>
