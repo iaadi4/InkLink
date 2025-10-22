@@ -69,11 +69,7 @@ export default function InkLinkLogin() {
         .font-jakarta {
           font-family: "Plus Jakarta Sans", sans-serif;
         }
-
-        @keyframes pan-dots {
-          0% { background-position: 0% 0%; }
-          100% { background-position: 200% 200%; }
-        }
+          
         @keyframes fade-in {
           from { opacity: 0; }
           to { opacity: 1; }
