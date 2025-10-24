@@ -60,6 +60,51 @@ const createRoom = async (req: Request, res: Response) => {
     }
 }
 
+const getUserRooms = async (req: Request, res: Response) => {
+    try {
+        const userId = req.user?.id;
+
+        if (!userId) {
+            return res.status(statusCode.UNAUTHORIZED).json({
+                success: false,
+                message: "Unauthorized",
+                error: {
+                    message: "User not found in request"
+                },
+                data: null,
+            });
+        }
+
+        // fetch last 3 rooms created by user
+        const data = await prisma.room.findMany({
+            take: 3,
+            where: {
+                userId
+            },
+            orderBy: {
+                createdAt: "asc"
+            }
+        })
+
+        return res.status(statusCode.SUCCESS).json({
+            success: true,
+            message: "Rooms fetched successfully",
+            error: null,
+            data
+        })
+
+    } catch (error) {
+        console.error(error);
+        return res.status(statusCode.INTERNAL_ERROR).json({
+            success: false,
+            message: "some error occur in controller layer",
+            error,
+            data: null
+        })
+    }
+}
+
 export {
-    createRoom
+    createRoom,
+    getUserRooms
 }
