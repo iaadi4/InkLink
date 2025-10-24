@@ -7,7 +7,7 @@ enum statusCode {
     UNAUTHORIZED = 401,
     FORBIDDEN = 403,
     SUCCESS_NO_CONTENT = 211,
-
+    PAYMENT_REQUIRED = 402
 }
 
 export default statusCode;

@@ -4,6 +4,8 @@ import statusCode from "../utils/status-codes";
 import prisma from "@repo/db";
 import { createRoomSchema } from "@repo/common/types";
 
+import { roomCost } from "../config";
+
 const createRoom = async (req: Request, res: Response) => {
     try {
         const validation = createRoomSchema.safeParse(req.body);
@@ -33,8 +35,46 @@ const createRoom = async (req: Request, res: Response) => {
             });
         }
 
-        const { name } = validation.data;
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId
+            }
+        });
 
+        if(!user) {
+            return res.status(statusCode.UNAUTHORIZED).json({
+                success: false,
+                message: "Unauthorized",
+                error: {
+                    message: "User not found"
+                },
+                data: null,
+            });
+        }   
+
+        const userBalance = user.token || 0;
+
+        if(userBalance < roomCost) {
+            return res.status(statusCode.PAYMENT_REQUIRED).json({
+                success: false,
+                message: "Insufficient balance to create room",
+                error: {
+                    message: `You need at least ${roomCost} tokens to create a room`
+                },
+                data: null,
+            });
+        }
+
+        await prisma.user.update({
+            where: {
+                id: userId
+            },
+            data: {
+                token: userBalance - roomCost
+            }
+        });
+
+        const { name } = validation.data;
         const data = await prisma.room.create({
             data: {
                 name,
