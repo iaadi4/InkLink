@@ -10,11 +10,14 @@
   "description": "",
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "prisma": "^6.16.2",
+    "@types/node": "^22.15.3",
+    "prisma": "^7.0.0",
     "tsx": "^4.20.5"
   },
   "dependencies": {
-    "@prisma/client": "^6.16.2",
-    "@prisma/extension-accelerate": "^2.0.2"
+    "@prisma/adapter-pg": "^7.0.0",
+    "@prisma/client": "^7.0.0",
+    "@prisma/extension-accelerate": "^2.0.2",
+    "dotenv": "^17.2.3"
   }
 }
