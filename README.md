@@ -3,6 +3,8 @@
 
 This is a full-stack, real-time drawing and collaboration application that allows multiple users to join rooms, draw on a shared canvas, and exchange data in real-time.
 
+[Demo.webm](https://github.com/user-attachments/assets/d209b835-1fa4-4f31-b8d8-340006777ae1)
+
 ## System Design
 
 The application uses a decoupled, scalable architecture. A Next.js client communicates with an HTTP backend for authentication and room management, while a dedicated WebSocket server handles all real-time data exchange. A message queue is used to process and persist data asynchronously.
