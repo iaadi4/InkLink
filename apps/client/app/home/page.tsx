@@ -62,10 +62,6 @@ interface Member { name: string; }
 interface Room { id: string | number; name: string; members?: Member[]; }
 const user = { name: "Alex Grant", email: "alex.grant@example.com" };
 
-const handleRoomJoin = async () => {
-
-}
-
 const RoomCard = ({ room, index }: { room: Room; index: number }) => {
     const router = useRouter();
     const roomPreview = useMemo(() => generateRoomPreview(room.id), [room.id]);
@@ -110,12 +106,13 @@ const RoomCard = ({ room, index }: { room: Room; index: number }) => {
     );
 };
 
-
 const ChatHomepage = () => {
+  const router = useRouter();
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [joinRoomId, setJoinRoomId] = useState("");
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -138,29 +135,66 @@ const ChatHomepage = () => {
     fetchRooms();
   }, []);
 
-  const handleRoomCreation = async () => {
-    if (!newRoomName.trim()) return;
-    const data = await fetch(`${httpServerUrl}/room/`, {
-      credentials: "include",
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: newRoomName }),
-    });
-    const result = await data.json();
-    if(result.success === false) {
-      toast.error(`Error: ${result.message}`);
+  const handleRoomJoin = async () => {
+    if (!joinRoomId.trim()) {
+      toast.error("Please enter a room ID");
       return;
     }
-    toast.success("Room created successfully!");
-    console.log("Created room:", result);
-    // Add the new room to the state immediately
-    if (result.data) {
-      setMyRooms((prevRooms) => [...prevRooms, result.data]);
+
+    try {
+      // Verify room exists by fetching it
+      const response = await fetch(`${httpServerUrl}/room/${joinRoomId}`, {
+        credentials: "include",
+      });
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        toast.success("Joining room...");
+        router.push(`/room/${joinRoomId}`);
+      } else {
+        toast.error("Room not found");
+      }
+    } catch (error) {
+      console.error("Error joining room:", error);
+      toast.error("Failed to join room");
     }
-    setNewRoomName("");
-    setShowCreateModal(false);
+  };
+
+  const handleRoomCreation = async () => {
+    if (!newRoomName.trim()) {
+      toast.error("Please enter a room name");
+      return;
+    }
+
+    try {
+      const data = await fetch(`${httpServerUrl}/room/`, {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newRoomName }),
+      });
+      const result = await data.json();
+      
+      if(result.success === false) {
+        toast.error(`Error: ${result.message}`);
+        return;
+      }
+      
+      toast.success("Room created successfully!");
+      console.log("Created room:", result);
+      
+      if (result.data) {
+        setMyRooms((prevRooms) => [...prevRooms, result.data]);
+      }
+      
+      setNewRoomName("");
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error("Error creating room:", error);
+      toast.error("Failed to create room");
+    }
   };
   
   const FADE_IN_ANIMATION_SETTINGS = {
@@ -197,10 +231,21 @@ const ChatHomepage = () => {
                         <div className="shrink-0"><WorkspaceIllustration className="w-48 h-auto"/></div>
                         <div className="flex-1"><h2 className="text-xl font-bold text-gray-900">Start or join a workspace</h2><p className="text-gray-500 mt-1">Enter an ID to join an existing room or create a new one.</p></div>
                         <div className="flex items-center gap-2 w-full md:w-auto">
-                            <Input placeholder="Paste Room ID..." className="h-11"/>
+                            <Input 
+                              placeholder="Paste Room ID..." 
+                              className="h-11"
+                              value={joinRoomId}
+                              onChange={(e) => setJoinRoomId(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && joinRoomId.trim()) {
+                                  handleRoomJoin();
+                                }
+                              }}
+                            />
                             <Button
                               className="bg-indigo-600 hover:bg-indigo-700 hover:cursor-pointer text-white font-semibold h-11 px-5"
                               onClick={handleRoomJoin}
+                              disabled={!joinRoomId.trim()}
                             >
                               <LogIn size={16} className="mr-2"/>
                               Join

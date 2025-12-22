@@ -1,129 +1,130 @@
-import { WebSocketServer } from "ws";
+import { WebSocketServer, WebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import cookie from "cookie";
-import { JWT_SECRET } from "@repo/backend-common/config";
-
-import { REDIS_URL } from "@repo/backend-common/config";
+import { parse } from "cookie";
+import http from "http";
+import { JWT_SECRET, REDIS_URL } from "@repo/backend-common/config";
 import { Queue } from "bullmq";
 
 const PORT = parseInt(process.env.PORT as string) || 8080;
 
-const wss = new WebSocketServer({ port: PORT });
+const server = http.createServer();
+const wss = new WebSocketServer({ noServer: true });
 
-const users: Map<string, WebSocket> = new Map();  // userId -> WebSocket
-const rooms: Map<string, Set<string>> = new Map(); // roomId -> Set of userIds
-
+const users: Map<string, WebSocket> = new Map();
+const rooms: Map<string, Set<string>> = new Map();
 
 const messageQueue = new Queue("chat-message", {
     connection: { url: REDIS_URL }
 });
 
-const checkAuthentication = (token: string) =>  {
+const checkAuthentication = (token: string): string | null => {
     try {
+        if (!token) return null;
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-
-        if(!decoded || !decoded.userId) {
-            console.error("Invalid token or userId not found in token");
+        
+        const actualId = decoded?.userId || decoded?.id; 
+        
+        if (!actualId) {
+            console.error("No ID found in JWT payload:", decoded);
             return null;
         }
-
-        return decoded.userId;
+        
+        return actualId;
     } catch (error) {
-        console.error("Authentication error:", error);
+        console.error("JWT Verification failed:", error instanceof Error ? error.message : "Invalid token");
         return null;
     }
 };
 
-wss.on("connection", (ws, req) => {
-    const cookies = cookie.parse(req.headers.cookie || "");
-    const jwtToken = cookies.token || "";
+const broadcastUserCount = (roomId: string) => {
+    const roomUsers = rooms.get(roomId);
+    if (!roomUsers) return;
 
-    const userId = checkAuthentication(jwtToken);
-    
-    if(!userId) {
-        ws.close(1008, "Authentication failed");
+    const message = JSON.stringify({
+        type: "user-count",
+        count: roomUsers.size
+    });
+
+    for (const userId of roomUsers) {
+        const ws = users.get(userId);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+        }
+    }
+};
+
+server.on("upgrade", (req, socket, head) => {
+    console.log("--- New Upgrade Request ---");
+    console.log("URL:", req.url);
+    console.log("Headers:", JSON.stringify(req.headers, null, 2));
+
+    const cookieHeader = req.headers.cookie || "";
+
+    const cookies = parse(cookieHeader);
+    const token = cookies.token || "";
+
+    const userId = checkAuthentication(token);
+
+    if (!userId) {
+        console.log("Auth Failed. Sending 401.");
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
         return;
     }
 
-    if(users.has(userId)) {
-        const existingWs = users.get(userId);
+    console.log("Auth Success. User:", userId);
+    wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit("connection", ws, req, userId);
+    });
+});
 
-        // If the existing WebSocket is open, close it before replacing
-        // with the new one. This prevents multiple connections for the same user.
-        if(existingWs && existingWs.readyState === existingWs.OPEN) {
-            existingWs.close(4000, "Session replaced");
-        }
-        users.delete(userId);
+wss.on("connection", (ws: WebSocket, req: http.IncomingMessage, userId: string) => {
+    
+    // Cleanup existing session for this user
+    const existingWs = users.get(userId);
+    if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+        existingWs.close(4000, "Session replaced");
     }
-
-    users.set(userId, ws as unknown as WebSocket);
+    
+    users.set(userId, ws);
 
     ws.on("message", async (data) => {
         let parsedData;
-
-        if(typeof data !== "string") {
-            parsedData = JSON.parse(data.toString()); // { type: "join-room", roomId: "room1" }
-        } else {
-            parsedData = JSON.parse(data);
+        try {
+            parsedData = JSON.parse(data.toString());
+        } catch (e) {
+            return;
         }
 
-        if(parsedData.type == "join-room") {
+        if (parsedData.type === "join-room") {
             const { roomId } = parsedData;
-
-            if(!rooms.has(roomId)) {
-                rooms.set(roomId, new Set());
-            }
+            if (!rooms.has(roomId)) rooms.set(roomId, new Set());
+            const roomUsers = rooms.get(roomId);
             
-            const roomUsers = rooms.get(roomId);
-
-            if(!roomUsers?.has(userId)) {
-                roomUsers?.add(userId);
+            if (roomUsers && !roomUsers.has(userId)) {
+                roomUsers.add(userId);
+                broadcastUserCount(roomId);
             }
 
-        } else if(parsedData.type == "leave-room") {
+        } else if (parsedData.type === "leave-room") {
             const { roomId } = parsedData;
-
             const roomUsers = rooms.get(roomId);
-            if (!roomUsers) return; // room doesn't exist
-
-            if(roomUsers.has(userId)) {
+            if (roomUsers?.has(userId)) {
                 roomUsers.delete(userId);
-
-                // clear empty room
-                if(roomUsers.size === 0) {
-                    rooms.delete(roomId);
-                }
+                broadcastUserCount(roomId);
+                if (roomUsers.size === 0) rooms.delete(roomId);
             }
-        } else if(parsedData.type == "send-data") {
+
+        } else if (parsedData.type === "send-data") {
             const { roomId, message } = parsedData;
-
             const roomUsers = rooms.get(roomId);
-            if(!roomUsers) {
-                return;
-            }
+            if (!roomUsers) return;
 
-            // Parse the message to check if it's drawing data
-            let parsedMessage;
-            try {
-                parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
-            } catch {
-                parsedMessage = { type: "message", message };
-            }
-
-            // Broadcasting message immediately to all users in the room
-            for(let roomUser of roomUsers) {
+            // Immediate broadcast
+            for (let roomUser of roomUsers) {
                 const roomUserWs = users.get(roomUser);
-                if(!roomUserWs) {
-                    continue;
-                }
-
-                // Send the parsed message with proper structure
-                if (parsedMessage.type === "drawing" || parsedMessage.type === "cursor" || parsedMessage.type === "clear") {
-                    // Send drawing/cursor data directly
-                    roomUserWs.send(JSON.stringify(parsedMessage));
-                } else {
-                    // Send chat messages with original format
-                    roomUserWs.send(JSON.stringify({
+                if (roomUserWs?.readyState === WebSocket.OPEN) {
+                    roomUserWs.send(JSON.stringify(typeof message === 'object' ? message : {
                         userId,
                         roomId,
                         message,
@@ -132,29 +133,26 @@ wss.on("connection", (ws, req) => {
                 }
             }
 
-            // Only queue chat messages for persistence, not drawing/cursor data
-            if (parsedMessage.type !== "drawing" && parsedMessage.type !== "cursor" && parsedMessage.type !== "clear") {
-                messageQueue.add(
-                    "saveMessage",
-                    { userId, roomId, message },
-                    // 5 retries before job fails
-                    // exponential -> delay increases with each retries (delay * 2^(attempt-1))
-                    { attempts: 5, backoff: { type: "exponential", delay: 1000 } } // base delay 1000ms = 1s
-                )
+            // Persistence via BullMQ
+            const isEphemeral = message?.type === "drawing" || message?.type === "cursor";
+            if (!isEphemeral) {
+                messageQueue.add("saveMessage", { userId, roomId, message });
             }
         }
-    })
+    });
 
     ws.on("close", () => {
         users.delete(userId);
-        for(const [roomId, roomUsers] of rooms.entries()) {
-            roomUsers.delete(userId);
-
-            if(roomUsers.size === 0) {
-                rooms.delete(roomId);
+        for (const [roomId, roomUsers] of rooms.entries()) {
+            if (roomUsers.has(userId)) {
+                roomUsers.delete(userId);
+                broadcastUserCount(roomId);
+                if (roomUsers.size === 0) rooms.delete(roomId);
             }
         }
-    })
+    });
 });
 
-console.log("Websocket server is running on port", PORT);
+server.listen(PORT, () => {
+    console.log(`WebSocket server is running on port ${PORT}`);
+});

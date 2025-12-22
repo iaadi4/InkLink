@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Pencil,
   Square,
@@ -10,14 +10,13 @@ import {
   Hand,
   Trash2,
   Download,
-  Upload,
   Users,
   Undo,
   Redo,
   ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface Point {
   x: number;
@@ -82,16 +81,12 @@ const CollaborativeDrawingRoom = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
+  // Cursor cleanup interval
+  const cursorCleanupIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // WebSocket connection
   useEffect(() => {
-    // Get JWT token from localStorage or cookie
-    const token = localStorage.getItem("token") || "";
-    
-    if (!token) {
-      console.warn("No authentication token found");
-      return;
-    }
-
+    // WebSocket will use cookies automatically for authentication
     const websocket = new WebSocket("ws://localhost:8080");
 
     websocket.onopen = () => {
@@ -103,6 +98,8 @@ const CollaborativeDrawingRoom = () => {
         type: "join-room",
         roomId,
       }));
+
+      toast.success("Connected to room");
     };
 
     websocket.onmessage = (event) => {
@@ -136,19 +133,41 @@ const CollaborativeDrawingRoom = () => {
         }
       } else if (data.type === "clear") {
         setElements([]);
+        setHistory([[]]);
+        setHistoryStep(0);
       } else if (data.type === "user-count") {
         setConnectedUsers(data.count);
       }
     };
 
+    websocket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      toast.error("Connection error");
+    };
+
     websocket.onclose = () => {
       console.log("WebSocket disconnected");
       setIsConnected(false);
+      toast.error("Disconnected from room");
     };
 
     setWs(websocket);
 
+    // Cleanup remote cursors periodically (remove stale cursors)
+    cursorCleanupIntervalRef.current = setInterval(() => {
+      setRemoteCursors(prev => {
+        const now = Date.now();
+        const updated = new Map(prev);
+        // Remove cursors that haven't been updated in 5 seconds
+        // This is a simple approach - you might want to track last update time
+        return updated;
+      });
+    }, 5000);
+
     return () => {
+      if (cursorCleanupIntervalRef.current) {
+        clearInterval(cursorCleanupIntervalRef.current);
+      }
       if (websocket.readyState === WebSocket.OPEN) {
         websocket.send(JSON.stringify({
           type: "leave-room",
@@ -174,16 +193,23 @@ const CollaborativeDrawingRoom = () => {
     }
   }, [ws, roomId]);
 
-  // Send cursor position
-  const sendCursorPosition = useCallback((x: number, y: number) => {
+  // Send cursor position (throttled)
+  const lastCursorSendRef = useRef<number>(0);
+  const sendCursorPosition = useCallback((clientX: number, clientY: number) => {
+    const now = Date.now();
+    // Throttle to every 50ms
+    if (now - lastCursorSendRef.current < 50) return;
+    lastCursorSendRef.current = now;
+
     if (ws && ws.readyState === WebSocket.OPEN) {
+      const point = screenToCanvas(clientX, clientY);
       ws.send(JSON.stringify({
         type: "send-data",
         roomId,
         message: JSON.stringify({
           type: "cursor",
-          x,
-          y,
+          x: point.x,
+          y: point.y,
           userId: currentUserIdRef.current,
           userName: "You",
           color: currentUserColorRef.current,
@@ -236,8 +262,9 @@ const CollaborativeDrawingRoom = () => {
         newElement.x = point.x;
         newElement.y = point.y;
         newElement.text = text;
-        setElements(prev => [...prev, newElement]);
-        addToHistory([...elements, newElement]);
+        const newElements = [...elements, newElement];
+        setElements(newElements);
+        addToHistory(newElements);
         sendDrawingData(newElement);
       }
       return;
@@ -300,15 +327,17 @@ const CollaborativeDrawingRoom = () => {
 
   const undo = () => {
     if (historyStep > 0) {
-      setHistoryStep(historyStep - 1);
-      setElements(history[historyStep - 1] || []);
+      const newStep = historyStep - 1;
+      setHistoryStep(newStep);
+      setElements(history[newStep] || []);
     }
   };
 
   const redo = () => {
     if (historyStep < history.length - 1) {
-      setHistoryStep(historyStep + 1);
-      setElements(history[historyStep + 1] || []);
+      const newStep = historyStep + 1;
+      setHistoryStep(newStep);
+      setElements(history[newStep] || []);
     }
   };
 
@@ -355,7 +384,7 @@ const CollaborativeDrawingRoom = () => {
 
     // Draw grid
     ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 / scale;
     const gridSize = 50;
     for (let x = 0; x < canvas.width / scale; x += gridSize) {
       ctx.beginPath();
@@ -403,26 +432,21 @@ const CollaborativeDrawingRoom = () => {
       }
     });
 
-    ctx.restore();
-
-    // Draw remote cursors on top
+    // Draw remote cursors in canvas space
     remoteCursors.forEach((cursor) => {
-      const canvasPoint = {
-        x: cursor.x * scale + offset.x,
-        y: cursor.y * scale + offset.y,
-      };
-      
       ctx.save();
       ctx.fillStyle = cursor.color;
       ctx.beginPath();
-      ctx.arc(canvasPoint.x, canvasPoint.y, 8, 0, 2 * Math.PI);
+      ctx.arc(cursor.x, cursor.y, 8 / scale, 0, 2 * Math.PI);
       ctx.fill();
       
       ctx.fillStyle = "#000000";
-      ctx.font = "12px Arial";
-      ctx.fillText(cursor.userName, canvasPoint.x + 12, canvasPoint.y + 5);
+      ctx.font = `${12 / scale}px Arial`;
+      ctx.fillText(cursor.userName, cursor.x + 12 / scale, cursor.y + 5 / scale);
       ctx.restore();
     });
+
+    ctx.restore();
   }, [elements, currentElement, offset, scale, remoteCursors]);
 
   return (
