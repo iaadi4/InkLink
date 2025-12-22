@@ -6,7 +6,6 @@ import { JWT_SECRET, REDIS_URL } from "@repo/backend-common/config";
 import { Queue } from "bullmq";
 
 const PORT = parseInt(process.env.PORT as string) || 8080;
-
 const server = http.createServer();
 const wss = new WebSocketServer({ noServer: true });
 
@@ -21,17 +20,8 @@ const checkAuthentication = (token: string): string | null => {
     try {
         if (!token) return null;
         const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-        
-        const actualId = decoded?.userId || decoded?.id; 
-        
-        if (!actualId) {
-            console.error("No ID found in JWT payload:", decoded);
-            return null;
-        }
-        
-        return actualId;
+        return decoded?.userId || decoded?.id || null;
     } catch (error) {
-        console.error("JWT Verification failed:", error instanceof Error ? error.message : "Invalid token");
         return null;
     }
 };
@@ -39,120 +29,82 @@ const checkAuthentication = (token: string): string | null => {
 const broadcastUserCount = (roomId: string) => {
     const roomUsers = rooms.get(roomId);
     if (!roomUsers) return;
-
-    const message = JSON.stringify({
-        type: "user-count",
-        count: roomUsers.size
+    const msg = JSON.stringify({ type: "user-count", count: roomUsers.size });
+    roomUsers.forEach(uId => {
+        const ws = users.get(uId);
+        if (ws?.readyState === WebSocket.OPEN) ws.send(msg);
     });
-
-    for (const userId of roomUsers) {
-        const ws = users.get(userId);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(message);
-        }
-    }
 };
 
 server.on("upgrade", (req, socket, head) => {
-    console.log("--- New Upgrade Request ---");
-    console.log("URL:", req.url);
-    console.log("Headers:", JSON.stringify(req.headers, null, 2));
-
-    const cookieHeader = req.headers.cookie || "";
-
-    const cookies = parse(cookieHeader);
-    const token = cookies.token || "";
-
-    const userId = checkAuthentication(token);
+    const cookies = parse(req.headers.cookie || "");
+    const userId = checkAuthentication(cookies.token || "");
 
     if (!userId) {
-        console.log("Auth Failed. Sending 401.");
         socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
         socket.destroy();
         return;
     }
 
-    console.log("Auth Success. User:", userId);
     wss.handleUpgrade(req, socket, head, (ws) => {
         wss.emit("connection", ws, req, userId);
     });
 });
 
 wss.on("connection", (ws: WebSocket, req: http.IncomingMessage, userId: string) => {
-    
-    // Cleanup existing session for this user
-    const existingWs = users.get(userId);
-    if (existingWs && existingWs.readyState === WebSocket.OPEN) {
-        existingWs.close(4000, "Session replaced");
-    }
-    
     users.set(userId, ws);
 
     ws.on("message", async (data) => {
         let parsedData;
         try {
             parsedData = JSON.parse(data.toString());
-        } catch (e) {
-            return;
-        }
+        } catch (e) { return; }
 
         if (parsedData.type === "join-room") {
             const { roomId } = parsedData;
             if (!rooms.has(roomId)) rooms.set(roomId, new Set());
-            const roomUsers = rooms.get(roomId);
-            
-            if (roomUsers && !roomUsers.has(userId)) {
-                roomUsers.add(userId);
-                broadcastUserCount(roomId);
-            }
+            rooms.get(roomId)?.add(userId);
+            broadcastUserCount(roomId);
 
         } else if (parsedData.type === "leave-room") {
             const { roomId } = parsedData;
-            const roomUsers = rooms.get(roomId);
-            if (roomUsers?.has(userId)) {
-                roomUsers.delete(userId);
-                broadcastUserCount(roomId);
-                if (roomUsers.size === 0) rooms.delete(roomId);
-            }
+            rooms.get(roomId)?.delete(userId);
+            broadcastUserCount(roomId);
 
         } else if (parsedData.type === "send-data") {
             const { roomId, message } = parsedData;
             const roomUsers = rooms.get(roomId);
             if (!roomUsers) return;
 
-            // Immediate broadcast
-            for (let roomUser of roomUsers) {
-                const roomUserWs = users.get(roomUser);
-                if (roomUserWs?.readyState === WebSocket.OPEN) {
-                    roomUserWs.send(JSON.stringify(typeof message === 'object' ? message : {
-                        userId,
-                        roomId,
-                        message,
-                        type: "message"
-                    }));
-                }
-            }
+            const payload = typeof message === "string" ? JSON.parse(message) : message;
 
-            // Persistence via BullMQ
-            const isEphemeral = message?.type === "drawing" || message?.type === "cursor";
-            if (!isEphemeral) {
-                messageQueue.add("saveMessage", { userId, roomId, message });
+            const outgoingMessage = JSON.stringify({
+                ...payload,
+                userId
+            });
+
+            roomUsers.forEach(uId => {
+                const userWs = users.get(uId);
+                if (userWs?.readyState === WebSocket.OPEN) {
+                    userWs.send(outgoingMessage);
+                }
+            });
+
+            if (!["drawing", "cursor", "clear"].includes(payload.type)) {
+                messageQueue.add("saveMessage", { userId, roomId, message: payload });
             }
         }
     });
 
     ws.on("close", () => {
         users.delete(userId);
-        for (const [roomId, roomUsers] of rooms.entries()) {
-            if (roomUsers.has(userId)) {
-                roomUsers.delete(userId);
-                broadcastUserCount(roomId);
-                if (roomUsers.size === 0) rooms.delete(roomId);
+        rooms.forEach((uIds, rId) => {
+            if (uIds.has(userId)) {
+                uIds.delete(userId);
+                broadcastUserCount(rId);
             }
-        }
+        });
     });
 });
 
-server.listen(PORT, () => {
-    console.log(`WebSocket server is running on port ${PORT}`);
-});
+server.listen(PORT, () => console.log(`WS Server on port ${PORT}`));
