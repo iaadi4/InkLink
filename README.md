@@ -1,135 +1,173 @@
-# Turborepo starter
 
-This Turborepo starter is maintained by the Turborepo core team.
+# Real-Time Drawing and Collaboration App
 
-## Using this example
+This is a full-stack, real-time drawing and collaboration application that allows multiple users to join rooms, draw on a shared canvas, and exchange data in real-time.
 
-Run the following command:
+## System Design
 
-```sh
-npx create-turbo@latest
+The application uses a decoupled, scalable architecture. A Next.js client communicates with an HTTP backend for authentication and room management, while a dedicated WebSocket server handles all real-time data exchange. A message queue is used to process and persist data asynchronously.
+
+```mermaid
+graph TD
+    subgraph "Client (Next.js)"
+        A[Browser]
+    end
+
+    subgraph "Backend Infrastructure"
+        B(HTTP Backend - Express.js)
+        C(WebSocket Backend - ws)
+        D(Database - PostgreSQL)
+        H(Message Queue - Redis & BullMQ)
+    end
+
+    subgraph "Services"
+        E(Authentication)
+        F(Room Management)
+        G(Real-time Data Events)
+    end
+
+    A -- "HTTP Requests (Login, Signup, etc.)" --> B
+    A -- "WebSocket Connection" --> C
+
+    B -- "User Authentication" --> E
+    B -- "Room Creation/Validation" --> F
+    B -- "Database Queries (Prisma)" --> D
+
+    C -- "Publishes Drawing & Chat Data" --> G
+    C -- "Adds Jobs to Queue" --> H
+    C -- "Broadcasts to Clients" --> A
+
+    H -- "Worker Processes Jobs (e.g., Save Chat)" --> D
+
+    E -- "Manages User Data" --> D
+    F -- "Manages Room Data" --> D
 ```
 
-## What's inside?
+## Features
 
-This Turborepo includes the following packages/apps:
+-   **User Authentication**: Secure user registration and login with JWT-based session management.
+-   **Room-Based Collaboration**: Users can create or join rooms to collaborate with others.
+-   **Real-Time Drawing**: A shared canvas where multiple users can draw simultaneously.
+-   **Real-Time Data Exchange**: The backend is equipped to handle real-time data, including chat messages, with persistence handled by a message queue.
+-   **Scalable Architecture**: The decoupled backend ensures that the application can handle a growing number of users.
 
-### Apps and Packages
+## Tech Stack
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+-   **Frontend**: [Next.js](https://nextjs.org/), [React](https://reactjs.org/), [Tailwind CSS](https://tailwindcss.com/)
+-   **HTTP Backend**: [Express.js](https://expressjs.com/), [TypeScript](https://www.typescriptlang.org/)
+-   **WebSocket Backend**: [ws](https://github.com/websockets/ws), [TypeScript](https://www.typescriptlang.org/)
+-   **Database**: [PostgreSQL](https://www.postgresql.org/), [Prisma](https://www.prisma.io/)
+-   **Message Queue**: [Redis](https://redis.io/), [BullMQ](https://bullmq.io/)
+-   **Monorepo Management**: [pnpm](https://pnpm.io/), [Turborepo](https://turbo.build/)
+-   **Validation**: [Zod](https://zod.dev/)
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Getting Started
 
-### Utilities
+To get the project up and running on your local machine, follow these steps.
 
-This Turborepo has some additional tools already setup for you:
+### Prerequisites
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+-   [Node.js](https://nodejs.org/en/) (v18 or higher)
+-   [pnpm](https://pnpm.io/installation)
+-   [Docker](https://www.docker.com/get-started) (for running local PostgreSQL and Redis instances)
 
-### Build
+### Installation
 
-To build all apps and packages, run the following command:
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/your-username/drawing-app.git
+    cd drawing-app
+    ```
 
-```
-cd my-turborepo
+2.  **Install dependencies**:
+    ```bash
+    pnpm install
+    ```
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+3.  **Set up the database and Redis**:
+    -   Start PostgreSQL and Redis instances using Docker:
+        ```bash
+        docker run --name drawing-app-db -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
+        docker run --name drawing-app-redis -p 6379:6379 -d redis
+        ```
+    -   Create a `.env` file in `packages/db` by copying the example:
+        ```bash
+        cp packages/db/.env.example packages/db/.env
+        ```
+    -   Update the `DATABASE_URL` in `packages/db/.env` with your database credentials.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+4.  **Set up the backends**:
+    -   Create `.env` files for the HTTP and WebSocket backends:
+        ```bash
+        cp apps/http-backend/.env.example apps/http-backend/.env
+        cp apps/ws-backend/.env.example apps/ws-backend/.env
+        ```
+    -   Update the environment variables in the `.env` files. Ensure `REDIS_URL` in `apps/ws-backend/.env` is set (e.g., `redis://localhost:6379`).
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+### Running the Application
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+-   **Run database migrations**:
+    ```bash
+    pnpm db:migrate
+    ```
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+-   **Start the development servers**:
+    ```bash
+    pnpm dev
+    ```
 
-### Develop
+This will start the client, HTTP backend, and WebSocket backend in development mode. The application will be accessible at `http://localhost:3000`.
 
-To develop all apps and packages, run the following command:
+## Project Structure
 
-```
-cd my-turborepo
+The project is a monorepo managed with pnpm and Turborepo.
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+-   `apps`:
+    -   `client`: The Next.js frontend.
+    -   `http-backend`: The Express.js backend for API requests.
+    -   `ws-backend`: The WebSocket backend for real-time communication.
+-   `packages`:
+    -   `backend-common`: Shared utilities for the backends.
+    -   `common`: Shared types and interfaces.
+    -   `db`: The Prisma schema and database client.
+    -   `eslint-config`: Shared ESLint configurations.
+    -   `typescript-config`: Shared TypeScript configurations.
+    -   `worker`: A worker service for processing jobs from the message queue (e.g., saving chat messages).
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+## API Endpoints
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+The HTTP backend provides the following endpoints:
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+-   `POST /auth/signup`: Register a new user.
+-   `POST /auth/login`: Log in a user and create a session.
+-   `POST /room/create`: Create a new collaboration room.
+-   `GET /room/:roomId`: Get the details of a specific room.
+-   `GET /room/join/:roomId`: Join a specific room.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+All endpoints under `/room` require authentication.
 
-### Remote Caching
+## WebSocket Events
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+The WebSocket backend handles the following real-time events:
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+-   `join-room`: Sent when a user joins a room.
+-   `leave-room`: Sent when a user leaves a room.
+-   `send-data`: A generic event for sending data to other users in a room. The `message` payload contains the specific data type (e.g., `drawing`, `cursor`, or chat messages). Non-drawing data is queued for persistence.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## Environment Variables
 
-```
-cd my-turborepo
+Refer to the `.env.example` files in each application's directory for a complete list of variables.
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
+-   **`apps/http-backend`**:
+    -   `DATABASE_URL`: Connection string for the PostgreSQL database.
+    -   `JWT_SECRET`: Secret key for signing JWTs.
+    -   `PORT`: Server port.
+-   **`apps/ws-backend`**:
+    -   `PORT`: WebSocket server port.
+    -   `REDIS_URL`: Connection URL for the Redis instance.
+-   **`packages/db`**:
+    -   `DATABASE_URL`: Connection string for the PostgreSQL database.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
+## Contributing
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue or submit a pull request.
