@@ -40,6 +40,7 @@ export default function InkLinkLogin() {
     try {
       const response = await fetch(`${httpServerUrl}/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });

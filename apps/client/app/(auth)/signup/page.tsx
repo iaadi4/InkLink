@@ -40,6 +40,7 @@ export default function InkLinkSignup() {
     try {
       const response = await fetch(`${httpServerUrl}/auth/signup`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });

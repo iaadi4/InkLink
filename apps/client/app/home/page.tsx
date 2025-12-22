@@ -109,7 +109,9 @@ const ChatHomepage = () => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const response = await fetch(`${httpServerUrl}/api/room/`);
+        const response = await fetch(`${httpServerUrl}/room/`, {
+          credentials: "include",
+        });
         const rooms = await response.json();
         console.log(rooms);
       } catch (error) {
