@@ -77,7 +77,7 @@ const createRoom = async (req: Request, res: Response) => {
         const { name } = validation.data;
         const data = await prisma.room.create({
             data: {
-                name,
+                name: name + " {id}- " + user.id,
                 userId
             }
         })

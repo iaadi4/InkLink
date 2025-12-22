@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { toast } from "sonner";
 import { httpServerUrl } from "config";
 
 const InkLinkLogo = ({ className }: { className?: string }) => (
@@ -38,12 +39,12 @@ const EmptyStateIllustration = ({ className }: { className?: string }) => (
     </div>
 );
 
-// Dynamic SVG Preview Generator
-const generateRoomPreview = (id: string) => {
+const generateRoomPreview = (id: string | number) => {
+    const idString = String(id);
     const hashCode = (s: string) => s.split('').reduce((a, b) => ((a << 5) - a + b.charCodeAt(0)) | 0, 0);
-    const seed = hashCode(id);
+    const seed = hashCode(idString);
     const rand = (min: number, max: number) => {
-      const random = Math.sin(seed + id.length) * 10000;
+      const random = Math.sin(seed + idString.length) * 10000;
       return (random - Math.floor(random)) * (max - min) + min;
     };
     
@@ -58,8 +59,12 @@ const generateRoomPreview = (id: string) => {
 };
 
 interface Member { name: string; }
-interface Room { id: string; name: string; members: Member[]; }
+interface Room { id: string | number; name: string; members?: Member[]; }
 const user = { name: "Alex Grant", email: "alex.grant@example.com" };
+
+const handleRoomJoin = async () => {
+
+}
 
 const RoomCard = ({ room, index }: { room: Room; index: number }) => {
     const router = useRouter();
@@ -79,18 +84,22 @@ const RoomCard = ({ room, index }: { room: Room; index: number }) => {
                 <p className="text-lg font-bold text-gray-900 group-hover:text-indigo-600 transition-colors flex-1">{room.name}</p>
                 <div className="flex justify-between items-center mt-4">
                     <div className="flex -space-x-2">
-                        {room.members.map(member => (
-                            <Image
-                                key={member.name}
-                                className="w-8 h-8 rounded-full border-2 border-white"
-                                src={`https://ui-avatars.com/api/?name=${member.name}&background=random&color=fff&font-size=0.4`}
-                                alt={member.name}
-                                title={member.name}
-                                width={32}
-                                height={32}
-                                unoptimized
-                            />
-                        ))}
+                        {room.members && room.members.length > 0 ? (
+                            room.members.map(member => (
+                                <Image
+                                    key={member.name}
+                                    className="w-8 h-8 rounded-full border-2 border-white"
+                                    src={`https://ui-avatars.com/api/?name=${member.name}&background=random&color=fff&font-size=0.4`}
+                                    alt={member.name}
+                                    title={member.name}
+                                    width={32}
+                                    height={32}
+                                    unoptimized
+                                />
+                            ))
+                        ) : (
+                            <span className="text-sm text-gray-400">No members yet</span>
+                        )}
                     </div>
                     <Button onClick={() => router.push(`/room/${room.id}`)} variant="ghost" className="font-semibold text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg">
                         Open <ArrowRight className="ml-2 w-4 h-4" />
@@ -105,6 +114,8 @@ const RoomCard = ({ room, index }: { room: Room; index: number }) => {
 const ChatHomepage = () => {
   const [myRooms, setMyRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -112,8 +123,11 @@ const ChatHomepage = () => {
         const response = await fetch(`${httpServerUrl}/room/`, {
           credentials: "include",
         });
-        const rooms = await response.json();
-        console.log(rooms);
+        const result = await response.json();
+        console.log(result);
+        if (result.success && result.data) {
+          setMyRooms(result.data);
+        }
       } catch (error) {
         console.error("Error fetching rooms:", error);
       } finally {
@@ -123,6 +137,31 @@ const ChatHomepage = () => {
 
     fetchRooms();
   }, []);
+
+  const handleRoomCreation = async () => {
+    if (!newRoomName.trim()) return;
+    const data = await fetch(`${httpServerUrl}/room/`, {
+      credentials: "include",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: newRoomName }),
+    });
+    const result = await data.json();
+    if(result.success === false) {
+      toast.error(`Error: ${result.message}`);
+      return;
+    }
+    toast.success("Room created successfully!");
+    console.log("Created room:", result);
+    // Add the new room to the state immediately
+    if (result.data) {
+      setMyRooms((prevRooms) => [...prevRooms, result.data]);
+    }
+    setNewRoomName("");
+    setShowCreateModal(false);
+  };
   
   const FADE_IN_ANIMATION_SETTINGS = {
     initial: { opacity: 0, y: 10 },
@@ -159,7 +198,13 @@ const ChatHomepage = () => {
                         <div className="flex-1"><h2 className="text-xl font-bold text-gray-900">Start or join a workspace</h2><p className="text-gray-500 mt-1">Enter an ID to join an existing room or create a new one.</p></div>
                         <div className="flex items-center gap-2 w-full md:w-auto">
                             <Input placeholder="Paste Room ID..." className="h-11"/>
-                            <Button className="bg-gray-800 hover:bg-gray-900 text-white font-semibold h-11 px-5"><LogIn size={16} className="mr-2"/> Join</Button>
+                            <Button
+                              className="bg-indigo-600 hover:bg-indigo-700 hover:cursor-pointer text-white font-semibold h-11 px-5"
+                              onClick={handleRoomJoin}
+                            >
+                              <LogIn size={16} className="mr-2"/>
+                              Join
+                            </Button>
                         </div>
                    </div>
                 </div>
@@ -168,7 +213,12 @@ const ChatHomepage = () => {
             <motion.div {...FADE_IN_ANIMATION_SETTINGS} transition={{...FADE_IN_ANIMATION_SETTINGS.transition, delay: 0.2}}>
                  <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-900">Your Rooms</h2>
-                    <Button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg shadow-lg shadow-indigo-200 transition-transform hover:scale-105"><Plus size={20} className="mr-2"/> Create Room</Button>
+                    <Button
+                      className="bg-indigo-600 hover:bg-indigo-700 hover:cursor-pointer text-white font-semibold rounded-lg shadow-lg shadow-indigo-200 transition-transform hover:scale-105"
+                      onClick={() => setShowCreateModal(true)}
+                    >
+                      <Plus size={20} className="mr-2"/> Create Room
+                    </Button>
                  </div>
                  
                  {isLoading ? ( <p className="text-center text-gray-500 py-10">Loading your brilliant ideas...</p>) 
@@ -185,6 +235,65 @@ const ChatHomepage = () => {
             </motion.div>
         </div>
       </main>
+
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCreateModal(false)}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Create New Room
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Give your workspace a memorable name
+              </p>
+              <Input
+                value={newRoomName}
+                onChange={(e) => setNewRoomName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && newRoomName.trim()) {
+                    handleRoomCreation();
+                  }
+                }}
+                placeholder="Enter room name..."
+                className="mb-6 h-11"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setNewRoomName("");
+                  }}
+                  variant="outline"
+                  className="flex-1 h-11"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleRoomCreation}
+                  disabled={!newRoomName.trim()}
+                  className="flex-1 h-11 bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
