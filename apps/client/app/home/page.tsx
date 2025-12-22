@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-
+import { httpServerUrl } from "config";
 
 const InkLinkLogo = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -107,15 +107,19 @@ const ChatHomepage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-        setMyRooms([
-            { id: "prj-collab-alpha", name: "Project Alpha Collaboration", members: [{name: "Mia"}, {name: "Leo"}] },
-            { id: "q4-marketing-sync", name: "Q4 Marketing Sync", members: [{name: "Chloe"}, {name: "Alex"}, {name: "Sam"}] },
-            { id: "ux-design-review", name: "UX Design Review", members: [{name: "Alex"}] },
-        ]);
+    const fetchRooms = async () => {
+      try {
+        const response = await fetch(`${httpServerUrl}/api/room/`);
+        const rooms = await response.json();
+        console.log(rooms);
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      } finally {
         setIsLoading(false);
-    }, 1500);
+      }
+    };
+
+    fetchRooms();
   }, []);
   
   const FADE_IN_ANIMATION_SETTINGS = {

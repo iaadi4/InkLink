@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import statusCode from "../utils/status-codes";
 
-import prisma from "@repo/db";
+import { prisma } from "@repo/db";
 import { createRoomSchema } from "@repo/common/types";
 
 import { roomCost } from "../config";

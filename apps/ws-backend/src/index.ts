@@ -1,5 +1,6 @@
 import { WebSocketServer } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import cookie from "cookie";
 import { JWT_SECRET } from "@repo/backend-common/config";
 
 import { REDIS_URL } from "@repo/backend-common/config";
@@ -14,7 +15,7 @@ const rooms: Map<string, Set<string>> = new Map(); // roomId -> Set of userIds
 
 
 const messageQueue = new Queue("chat-message", {
-    connection: { host: REDIS_URL }
+    connection: { url: REDIS_URL }
 });
 
 const checkAuthentication = (token: string) =>  {
@@ -34,14 +35,8 @@ const checkAuthentication = (token: string) =>  {
 };
 
 wss.on("connection", (ws, req) => {
-    const reqUrl = req.url;
-
-    if(!reqUrl) {
-        return;
-    }
-
-    const queryParams = new URLSearchParams(reqUrl.split('?')[1]);
-    const jwtToken = queryParams.get("token") || "";
+    const cookies = cookie.parse(req.headers.cookie || "");
+    const jwtToken = cookies.token || "";
 
     const userId = checkAuthentication(jwtToken);
     
@@ -107,28 +102,46 @@ wss.on("connection", (ws, req) => {
                 return;
             }
 
-            // brodcasting message immediately, creating message in db is pushed in queue to remove delay
+            // Parse the message to check if it's drawing data
+            let parsedMessage;
+            try {
+                parsedMessage = typeof message === "string" ? JSON.parse(message) : message;
+            } catch {
+                parsedMessage = { type: "message", message };
+            }
+
+            // Broadcasting message immediately to all users in the room
             for(let roomUser of roomUsers) {
                 const roomUserWs = users.get(roomUser);
                 if(!roomUserWs) {
                     continue;
                 }
 
-                roomUserWs.send(JSON.stringify({
-                    userId,
-                    roomId,
-                    message,
-                    type: "message"
-                }));
+                // Send the parsed message with proper structure
+                if (parsedMessage.type === "drawing" || parsedMessage.type === "cursor" || parsedMessage.type === "clear") {
+                    // Send drawing/cursor data directly
+                    roomUserWs.send(JSON.stringify(parsedMessage));
+                } else {
+                    // Send chat messages with original format
+                    roomUserWs.send(JSON.stringify({
+                        userId,
+                        roomId,
+                        message,
+                        type: "message"
+                    }));
+                }
             }
 
-            messageQueue.add(
-                "saveMessage",
-                { userId, roomId, message },
-                // 5 retries before job fails
-                // exponential -> delay increases with each retries (delay * 2^(attempt-1))
-                { attempts: 5, backoff: { type: "exponential", delay: 1000 } } // base delay 1000ms = 1s
-            )
+            // Only queue chat messages for persistence, not drawing/cursor data
+            if (parsedMessage.type !== "drawing" && parsedMessage.type !== "cursor" && parsedMessage.type !== "clear") {
+                messageQueue.add(
+                    "saveMessage",
+                    { userId, roomId, message },
+                    // 5 retries before job fails
+                    // exponential -> delay increases with each retries (delay * 2^(attempt-1))
+                    { attempts: 5, backoff: { type: "exponential", delay: 1000 } } // base delay 1000ms = 1s
+                )
+            }
         }
     })
 

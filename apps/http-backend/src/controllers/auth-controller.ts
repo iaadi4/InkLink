@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import type { Request, Response } from "express";
 import statusCode from "../utils/status-codes";
-import prisma from "@repo/db";
+import { prisma } from "@repo/db";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { createUserSchema, loginUserSchema } from "@repo/common/types";
 
