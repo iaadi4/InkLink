@@ -1,6 +1,6 @@
 import { Worker } from "bullmq"; 
 import { REDIS_URL } from "@repo/backend-common/config";
-import prisma from "@repo/db";
+import { prisma } from "@repo/db";
 
 const worker = new Worker(
     "chat-message",
